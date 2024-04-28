@@ -11,3 +11,10 @@ const result = count(2, 1);
 
 console.log(result);
 console.log(sum(1, 2, 3, 4));
+
+
+if (module.hot) {
+    // 是否支持热模块替换
+    module.hot.accept('./js/count')
+    module.hot.accept('./js/sum')
+}

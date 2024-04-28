@@ -1,6 +1,10 @@
 const path = require("path");
 const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebapckPlugin = require('html-webpack-plugin')
+const os = require('os')
+
+// cpu 核数
+const threads = os.cpus().length
 
 module.exports = {
   //1. 入口 entry
@@ -21,55 +25,74 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.css$/,
-        // 执行顺序 从右到左，从下到上
-        // loader: 'xxx' 只能使用1个loader
-        // use: ['xx', 'xx'] 可以使用多个loader
-        use: [
-          "style-loader", // 将js中css通过创建style标签添加html文件中生效
-          "css-loader", // 将css资源变成成commonjs的模块到js中
-        ],
-      },
-      {
-        test: /\.less$/,
-        use: ["style-loader", "css-loader", "less-loader"],
-      },
-      {
-        test: /\.s[ac]ss$/,
-        use: ["style-loader", "css-loader", "sass-loader"],
-      },
-      {
-        test: /\.styl$/,
-        use: ["style-loader", "css-loader", "stylus-loader"],
-      },
-      {
-        test: /\.(png|jpe?g|gif|webp|svg)$/,
-        type: "asset",
-        parser: {
-          dataUrlCondition: {
-            // 小于10kb的图片转base64
-            // 优点：减少请求数量
-            // 缺点：体积会更大
-            maxSize: 10 * 1024, // 10kb
+        // 每个文件只能被其中一个loader配置处理
+        oneOf: [
+          {
+            test: /\.css$/,
+            // 执行顺序 从右到左，从下到上
+            // loader: 'xxx' 只能使用1个loader
+            // use: ['xx', 'xx'] 可以使用多个loader
+            use: [
+              "style-loader", // 将js中css通过创建style标签添加html文件中生效
+              "css-loader", // 将css资源变成成commonjs的模块到js中
+            ],
           },
-        },
-        generator: {
-          filename: "static/images/[hash:10][ext][query]",
-        },
-      },
-      {
-        test: /\.(ttf|woff2?|map3|map4|avi)$/,
-        type: "asset/resource",
-        generator: {
-          filename: "static/media/[hash:10][ext][query]",
-        },
-      },
-      {
-        test: /\.js$/,
-        exclude: /node_modules/,
-        use: {
-          loader: 'babel-loader'
-        }
+          {
+            test: /\.less$/,
+            use: ["style-loader", "css-loader", "less-loader"],
+          },
+          {
+            test: /\.s[ac]ss$/,
+            use: ["style-loader", "css-loader", "sass-loader"],
+          },
+          {
+            test: /\.styl$/,
+            use: ["style-loader", "css-loader", "stylus-loader"],
+          },
+          {
+            test: /\.(png|jpe?g|gif|webp|svg)$/,
+            type: "asset",
+            parser: {
+              dataUrlCondition: {
+                // 小于10kb的图片转base64
+                // 优点：减少请求数量
+                // 缺点：体积会更大
+                maxSize: 10 * 1024, // 10kb
+              },
+            },
+            generator: {
+              filename: "static/images/[hash:10][ext][query]",
+            },
+          },
+          {
+            test: /\.(ttf|woff2?|map3|map4|avi)$/,
+            type: "asset/resource",
+            generator: {
+              filename: "static/media/[hash:10][ext][query]",
+            },
+          },
+          {
+            test: /\.js$/,
+            exclude: /node_modules/,
+            // include: path.resolve(__dirname, '../src'),  // 只处理src中的js文件
+            use: [
+              {
+                // 开始多进程打包
+                loader: 'thread-loader',
+                options: {
+                  works: threads // 进程数量
+                }
+              },
+              {
+                loader: 'babel-loader',
+                options: {
+                  cacheDirectory: true,   // 开始缓存
+                  cacheCompression: false // 关闭缓存压缩
+                }
+              },
+            ]
+          }
+        ]
       }
     ],
   },
@@ -77,7 +100,11 @@ module.exports = {
   plugins: [
     new ESLintPlugin({
       //检测哪些文件
-      context: path.resolve(__dirname, '../src')
+      context: path.resolve(__dirname, '../src'),
+      exclude: 'node_modules',
+      cache: true,
+      cacheLocation: path.resolve(__dirname, '../node_modules/.cache/eslintcache'),
+      threads
     }), 
     new HtmlWebapckPlugin({
       // 模板
@@ -91,6 +118,9 @@ module.exports = {
   devServer: {
     host: 'localhost',
     port: '3000',
-    open: true
-  }
+    open: true,
+    hot: true
+  },
+  // 只有行映射，没有列映射，打包编译快
+  devtool: "cheap-module-source-map"
 };

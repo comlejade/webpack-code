@@ -3,6 +3,12 @@ const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebapckPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+const os = require('os')
+const TerserPlugin = require('terser-webpack-plugin')
+const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin')
+
+// cpu 核数
+const threads = os.cpus().length
 
 function getStyleLoader(pre) {
   return [
@@ -39,52 +45,68 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.css$/,
-        // 执行顺序 从右到左，从下到上
-        // loader: 'xxx' 只能使用1个loader
-        // use: ['xx', 'xx'] 可以使用多个loader
-        use: getStyleLoader(),
-      },
-      {
-        test: /\.less$/,
-        use: getStyleLoader('less-loader'),
-      },
-      {
-        test: /\.s[ac]ss$/,
-        use: getStyleLoader('sass-loader'),
-      },
-      {
-        test: /\.styl$/,
-        use: getStyleLoader('stylus-loader'),
-      },
-      {
-        test: /\.(png|jpe?g|gif|webp|svg)$/,
-        type: "asset",
-        parser: {
-          dataUrlCondition: {
-            // 小于10kb的图片转base64
-            // 优点：减少请求数量
-            // 缺点：体积会更大
-            maxSize: 10 * 1024, // 10kb
+        oneOf: [
+          {
+            test: /\.css$/,
+            // 执行顺序 从右到左，从下到上
+            // loader: 'xxx' 只能使用1个loader
+            // use: ['xx', 'xx'] 可以使用多个loader
+            use: getStyleLoader(),
           },
-        },
-        generator: {
-          filename: "static/images/[hash:10][ext][query]",
-        },
-      },
-      {
-        test: /\.(ttf|woff2?|map3|map4|avi)$/,
-        type: "asset/resource",
-        generator: {
-          filename: "static/media/[hash:10][ext][query]",
-        },
-      },
-      {
-        test: /\.js$/,
-        exclude: /node_modules/,
-        use: {
-          loader: 'babel-loader'
-        }
+          {
+            test: /\.less$/,
+            use: getStyleLoader('less-loader'),
+          },
+          {
+            test: /\.s[ac]ss$/,
+            use: getStyleLoader('sass-loader'),
+          },
+          {
+            test: /\.styl$/,
+            use: getStyleLoader('stylus-loader'),
+          },
+          {
+            test: /\.(png|jpe?g|gif|webp|svg)$/,
+            type: "asset",
+            parser: {
+              dataUrlCondition: {
+                // 小于10kb的图片转base64
+                // 优点：减少请求数量
+                // 缺点：体积会更大
+                maxSize: 10 * 1024, // 10kb
+              },
+            },
+            generator: {
+              filename: "static/images/[hash:10][ext][query]",
+            },
+          },
+          {
+            test: /\.(ttf|woff2?|map3|map4|avi)$/,
+            type: "asset/resource",
+            generator: {
+              filename: "static/media/[hash:10][ext][query]",
+            },
+          },
+          {
+            test: /\.js$/,
+            exclude: /node_modules/,
+            use: [
+              {
+                // 开始多进程打包
+                loader: 'thread-loader',
+                options: {
+                  works: threads // 进程数量
+                }
+              },
+              {
+              loader: 'babel-loader',
+              options: {
+                cacheDirectory: true,   // 开始缓存
+                cacheCompression: false // 关闭缓存压缩
+              }
+            }]
+          }
+        ]
       }
     ],
   },
@@ -92,7 +114,11 @@ module.exports = {
   plugins: [
     new ESLintPlugin({
       //检测哪些文件
-      context: path.resolve(__dirname, '../src')
+      context: path.resolve(__dirname, '../src'),
+      exclude: 'node_modules',
+      cache: true,
+      cacheLocation: path.resolve(__dirname, '../node_modules/.cache/eslintcache'),
+      threads // 开启多进程
     }), 
     new HtmlWebapckPlugin({
       // 模板
@@ -102,11 +128,49 @@ module.exports = {
     // 将css提取到单独的文件
     new MiniCssExtractPlugin({
       filename: 'static/css/main-[hash:10].css'
-    })
+    }),
+    
   ],
   //5. mode
   mode: "production",
   optimization: {
-    minimizer: [new CssMinimizerPlugin()]
-  }
+    minimizer: [
+      // 压缩css
+      new CssMinimizerPlugin(),
+      // 压缩js
+      new TerserPlugin({
+        parallel: threads,// 开启多进程
+      }),
+      // 压缩图片
+      new ImageMinimizerPlugin({
+        minimizer: {
+          implementation: ImageMinimizerPlugin.imageminGenerate,
+          options: {
+            plugins: [
+              ["gifsicle", { interlaced: true }],
+              ["jpegtran", { progressive: true }],
+              ["optipng", { optimizationLevel: 5 }],
+              [
+                "svgo",
+                {
+                  plugins: [
+                    "preset-default",
+                    "prefixIds",
+                    {
+                      name: "sortAttrs",
+                      params: {
+                        xmlnsOrder: "alphabetical",
+                      },
+                    },
+                  ],
+                },
+              ],
+            ],
+          },
+        },
+      }),
+    ]
+  },
+  // 包含行/列映射，打包慢
+  devtool: "source-map"
 };
