@@ -1,6 +1,26 @@
 const path = require("path");
 const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebapckPlugin = require('html-webpack-plugin')
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+
+function getStyleLoader(pre) {
+  return [
+    MiniCssExtractPlugin.loader, // 将js中css通过创建style标签添加html文件中生效
+    "css-loader", // 将css资源变成成commonjs的模块到js中
+    {
+      loader: "postcss-loader",
+      options: {
+        postcssOptions: {
+          plugins: [
+            "postcss-preset-env", // 能解决大多数样式兼容性问题
+          ],
+        },
+      },
+    },
+    pre
+  ].filter(Boolean)
+}
 
 module.exports = {
   //1. 入口 entry
@@ -23,22 +43,19 @@ module.exports = {
         // 执行顺序 从右到左，从下到上
         // loader: 'xxx' 只能使用1个loader
         // use: ['xx', 'xx'] 可以使用多个loader
-        use: [
-          "style-loader", // 将js中css通过创建style标签添加html文件中生效
-          "css-loader", // 将css资源变成成commonjs的模块到js中
-        ],
+        use: getStyleLoader(),
       },
       {
         test: /\.less$/,
-        use: ["style-loader", "css-loader", "less-loader"],
+        use: getStyleLoader('less-loader'),
       },
       {
         test: /\.s[ac]ss$/,
-        use: ["style-loader", "css-loader", "sass-loader"],
+        use: getStyleLoader('sass-loader'),
       },
       {
         test: /\.styl$/,
-        use: ["style-loader", "css-loader", "stylus-loader"],
+        use: getStyleLoader('stylus-loader'),
       },
       {
         test: /\.(png|jpe?g|gif|webp|svg)$/,
@@ -81,8 +98,15 @@ module.exports = {
       // 模板
       // 新的html文件特检： 1. 结构和原来一样，2. 自动引入打包后的js文件
       template: path.resolve(__dirname, '../public/index.html')
+    }),
+    // 将css提取到单独的文件
+    new MiniCssExtractPlugin({
+      filename: 'static/css/main-[hash:10].css'
     })
   ],
   //5. mode
   mode: "production",
+  optimization: {
+    minimizer: [new CssMinimizerPlugin()]
+  }
 };
