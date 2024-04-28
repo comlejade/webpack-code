@@ -1,0 +1,26 @@
+.box {
+    width: 100px;
+    height: 100px;
+    background-color: red;
+}
+
+.box2 {
+    width: 100px;
+    height: 100px;
+    background: url('../images/1.webp') center center no-repeat;
+    background-size: cover;
+}
+
+.box3 {
+    width: 100px;
+    height: 100px;
+    background: url('../images/2.jpg') center center no-repeat;
+    background-size: cover;
+}
+
+.box4 {
+    width: 100px;
+    height: 100px;
+    background: url('../images/3.jpg') center center no-repeat;
+    background-size: cover;
+}
