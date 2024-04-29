@@ -1,6 +1,8 @@
 import count from "./js/count";
 import sum from "./js/sum";
 
+// 按需加载
+
 import "./css/index.css";
 import "./less/index.less";
 import "./scss/inde.scss";
@@ -20,6 +22,22 @@ document.getElementById('btn').addEventListener('click', function() {
         console.log('模块加载失败', err)
     })
 })
+
+new Promise((resolve) => {
+    setTimeout(() => {
+        resolve()
+    }, 1000)
+})
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js').then(registration => {
+        console.log('SW registered: ', registration);
+      }).catch(registrationError => {
+        console.log('SW registration failed: ', registrationError);
+      });
+    });
+  }
 
 
 if (module.hot) {
