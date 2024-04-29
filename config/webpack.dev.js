@@ -17,9 +17,13 @@ module.exports = {
     // __dirname nodejs的变量，代表当前文件的文件夹目录
     path: undefined,
     // 入口文件打包输出的文件名
-    filename: "js/main.js",
+    filename: "static/js/[name].js",
+    // 给打包输出的其他文件命名
+    chunkFilename: 'static/js/[name].chunk.js',
+    // 图片、字体等通过type:asset处理资源命名方式
+    assetModuleFilename: 'static/medai/[hash:10][ext][query]',
     // 在打包前，将path整个目录内容清空
-    clean: true,
+    // clean: true,
   },
   //3. loader
   module: {
@@ -60,16 +64,16 @@ module.exports = {
                 maxSize: 10 * 1024, // 10kb
               },
             },
-            generator: {
-              filename: "static/images/[hash:10][ext][query]",
-            },
+            // generator: {
+            //   filename: "static/images/[hash:10][ext][query]",
+            // },
           },
           {
             test: /\.(ttf|woff2?|map3|map4|avi)$/,
             type: "asset/resource",
-            generator: {
-              filename: "static/media/[hash:10][ext][query]",
-            },
+            // generator: {
+            //   filename: "static/media/[hash:10][ext][query]",
+            // },
           },
           {
             test: /\.js$/,

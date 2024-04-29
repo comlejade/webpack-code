@@ -37,7 +37,11 @@ module.exports = {
     // __dirname nodejs的变量，代表当前文件的文件夹目录
     path: path.resolve(__dirname, "../dist"),
     // 入口文件打包输出的文件名
-    filename: "static/js/main.js",
+    filename: "static/js/[name].[contenthash:8].js",
+    // 给打包输出的其他文件命名
+    chunkFilename: 'static/js/[name].[contenthash:8].chunk.js',
+    // 图片、字体等通过type:asset处理资源命名方式
+    assetModuleFilename: 'static/medai/[hash:10][ext][query]',
     // 在打包前，将path整个目录内容清空
     clean: true,
   },
@@ -76,16 +80,18 @@ module.exports = {
                 maxSize: 10 * 1024, // 10kb
               },
             },
-            generator: {
-              filename: "static/images/[hash:10][ext][query]",
-            },
+            // 已经在上面统一处理
+            // generator: {
+            //   filename: "static/images/[hash:10][ext][query]",
+            // },
           },
           {
             test: /\.(ttf|woff2?|map3|map4|avi)$/,
             type: "asset/resource",
-            generator: {
-              filename: "static/media/[hash:10][ext][query]",
-            },
+            // 已经在上面统一处理
+            // generator: {
+            //   filename: "static/media/[hash:10][ext][query]",
+            // },
           },
           {
             test: /\.js$/,
@@ -127,9 +133,9 @@ module.exports = {
     }),
     // 将css提取到单独的文件
     new MiniCssExtractPlugin({
-      filename: 'static/css/main-[hash:10].css'
+      filename: 'static/css/[name].[contenthash:8].css',
+      chunkFilename: 'static/css/[name].[contenthash:8].chunk.css'
     }),
-    
   ],
   //5. mode
   mode: "production",
@@ -169,7 +175,15 @@ module.exports = {
           },
         },
       }),
-    ]
+    ],
+    // 代码分割配置
+    splitChunks: {
+      chunks: 'all'
+      // 其他用默认配置
+    },
+    runtimeChunk: {
+      name: entrypoint => `runtime~${entrypoint.name}.js`
+    }
   },
   // 包含行/列映射，打包慢
   devtool: "source-map"
